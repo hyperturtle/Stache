@@ -172,9 +172,10 @@ or
     a = 1; b = [ 1 2 3 4 5 ] stachio
 
 If you want to put in dynamic file loading of partials you can override
-`Stache().templates` with a `dict()` like object and override the `__get__` and 
-'__set__' method. Once you load up the template, you'll need to call 
-`self.add_template(template_name, template)` to tokenize the template.
+`Stache().templates` with a `dict()` like object and override the `__get__` and
+load the template in `__get__` if it doesn't exist. Once you load up the template,
+you'll need to call `self.add_template(template_name, template)` to tokenize the
+template.
 
 ## Efficient use with async wsgi:
 
