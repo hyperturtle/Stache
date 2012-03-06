@@ -62,16 +62,19 @@ Is the same as:
 
 ## {{.}} Self Referencer
 
-This is useful if you want to iterate over an array and wrap them.
+This renders the current "scope". This is useful if you want to iterate over an array
+and wrap them.
 
     {{#array}}<li>{{.}}</li>\n{{/array}}
 
 with `array = [1,2,3,'yay']` will produce:
 
-    <li>1</li>
-    <li>2</li>
-    <li>3</li>
-    <li>yay</li>
+```html
+<li>1</li>
+<li>2</li>
+<li>3</li>
+<li>yay</li>
+````
 
 ## Existence Check {{?exists}}{{/}}
 
@@ -82,7 +85,7 @@ is useful for check if an array has members rather than iterate over the members
     stuff\n
     {{/}}
 
-with {array: [1, 2, 3, 4]} results in:
+with `{array: [1, 2, 3, 4]}` results in:
 
     stuff
 
@@ -117,22 +120,65 @@ or similiar will help with collisions. This is helpful if you want to use stache
 templates for masterpages/inheritance.
 Lets say you have these templates:
 
-    master = '{{header}}\n{{footer}}'
-    page = '{{<header}}{{name}}{{/header}}{{<footer}}footer{{/footer}}{{>master}}'
+#### master =
+
+    <div id="header">
+    {{header}}
+    </div>
+
+    <div id="footer">
+    {{footer}}
+    </div>
+
+#### page = 
+
+    {{<header}}
+    {{name}}
+    {{/header}}
+
+    {{<footer}}
+    footer
+    {{/footer}}
+
+    {{>master}}
 
 Rendering the `page` template with `{'name': 'Stachio'}` will produce
 
-    Stachio
-    footer
+```html
+<div id="header">
+Stachio
+</div>
+
+<div id="footer">
+footer
+</div>
+```
 
 You can also apply the inverted block to supply default blocks
 
-    master = '{{header}}{{^header}}Default Header{{/header}}\n{{footer}}{{^footer}}Default Footer{{/footer}}'
+#### master =
+    
+    <div id="header">
+    {{header}}
+    {{^header}}Default Header{{/header}}
+    </div>
 
-Rendering `{{<footer}}Stachio{{/footer}}{{>master}}` with `{}` will produce
+    <div id="footer">
+    {{footer}}
+    {{^footer}}Default Footer{{/footer}}
+    </div>
 
-    Default Header
-    Stachio
+Rendering `{{<footer}}Custom Footer{{/footer}}{{>master}}` with `{}` will produce
+
+```html
+<div id="header">
+Default Header
+</div>
+
+<div id="footer">
+Custom Footer
+</div>
+```
 
 # Install
 
@@ -176,6 +222,8 @@ If you want to put in dynamic file loading of partials you can override
 load the template in `__get__` if it doesn't exist. Once you load up the template,
 you'll need to call `self.add_template(template_name, template)` to tokenize the
 template.
+
+I don't think this is ideal though... Ideas for populating partials are welcome.
 
 ## Efficient use with async wsgi:
 

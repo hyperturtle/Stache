@@ -112,7 +112,7 @@ class Stache(object):
 
     def _parse(self, tokens, *data):
         for token in tokens:
-            print '    token:' + str(token)
+            #print '    token:' + str(token)
             tag, content, scope = token
             if tag == TOKEN_RAW:
                 yield str(content)
