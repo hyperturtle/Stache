@@ -39,6 +39,8 @@ def test(method=bare):
     yield method, 'a', 'a{{?b}}ignoreme{{/}}', dict(b=False)
     yield method, 'a', 'a{{?b}}ignoreme{{/}}', dict(b=[])
     yield method, 'a', 'a{{?b}}ignoreme{{/}}', dict()
+    yield method, 'abb', 'a{{?b}}b{{/}}{{?b}}b{{/}}', dict(b=[1,2,3])
+    yield method, 'ab123d', 'a{{?b}}b{{#b}}{{.}}{{/}}d{{/}}', dict(b=[1,2,3])
     #test #section scope
     yield method, 'abbbb', 'a{{#b}}b{{/b}}', dict(b=[1,2,3,4])
     yield method, 'a1234', 'a{{#b}}{{.}}{{/b}}', dict(b=[1,2,3,4])

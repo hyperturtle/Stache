@@ -9,7 +9,7 @@ TOKEN_TAGCOMMENT = intern('tagcomment')
 TOKEN_TAGDELIM   = intern('tagdelim')
 TOKEN_TAG        = intern('tag')
 TOKEN_PARTIAL    = intern('partial')
-TOKEN_PUSH       = intern('block')
+TOKEN_PUSH       = intern('push')
 TOKEN_BOOL       = intern('bool')
 
 
@@ -82,38 +82,38 @@ class Stache(object):
                 rest = rest.lstrip()
 
             if pre:
-                yield TOKEN_RAW, pre
+                yield TOKEN_RAW, pre, len(scope)
 
             if open_tag:
                 scope.append(open_tag)
-                yield TOKEN_TAGOPEN, open_tag
+                yield TOKEN_TAGOPEN, open_tag, len(scope)
             elif bool_tag:
                 scope.append(bool_tag)
-                yield TOKEN_BOOL, bool_tag
+                yield TOKEN_BOOL, bool_tag, len(scope)
             elif invert_tag:
                 scope.append(invert_tag)
-                yield TOKEN_TAGINVERT, invert_tag
+                yield TOKEN_TAGINVERT, invert_tag, len(scope)
             elif close_tag is not None:
                 current_scope = scope.pop()
                 if close_tag:
                     assert (current_scope == close_tag), 'Mismatch open/close blocks'
-                yield TOKEN_TAGCLOSE, current_scope
+                yield TOKEN_TAGCLOSE, current_scope, len(scope)+1
             elif comment_tag:
-                yield TOKEN_TAGCOMMENT, comment_tag
+                yield TOKEN_TAGCOMMENT, comment_tag, 0
             elif partial_tag:
-                yield TOKEN_PARTIAL, partial_tag
+                yield TOKEN_PARTIAL, partial_tag, 0
             elif push_tag:
                 scope.append(push_tag)
-                yield TOKEN_PUSH, push_tag
+                yield TOKEN_PUSH, push_tag, len(scope)
             elif delim_tag:
-                yield TOKEN_TAGDELIM, delim_tag
+                yield TOKEN_TAGDELIM, delim_tag, 0
             else:
-                yield TOKEN_TAG, taglabel
+                yield TOKEN_TAG, taglabel, 0
 
     def _parse(self, tokens, *data):
         for token in tokens:
-            #print '    token:' + str(token)
-            tag, content = token
+            print '    token:' + str(token)
+            tag, content, scope = token
             if tag == TOKEN_RAW:
                 yield str(content)
             elif tag == TOKEN_TAG:
@@ -122,7 +122,7 @@ class Stache(object):
                     yield str(tagvalue)
             elif tag == TOKEN_TAGOPEN or tag == TOKEN_TAGINVERT:
                 tagvalue = _lookup(data, content)
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content), tokens)
+                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 if (tag == TOKEN_TAGOPEN and tagvalue) or (tag == TOKEN_TAGINVERT and not tagvalue):
                     if hasattr(tagvalue, 'items'):
                         #print '    its a dict!', tagvalue, untilclose
@@ -150,7 +150,7 @@ class Stache(object):
                         pass
             elif tag == TOKEN_BOOL:
                 tagvalue = _lookup(data, content)
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content), tokens)
+                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 if tagvalue:
                     for part in self._parse(untilclose, *data):
                         yield part
@@ -162,7 +162,7 @@ class Stache(object):
                     for part in self._parse(iter(list(self.templates[content])), *data):
                         yield part
             elif tag == TOKEN_PUSH:
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content), tokens)
+                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 data[-1][content] = ''.join(self._parse(untilclose, *data))
             elif tag == TOKEN_TAGDELIM:
                 self.otag, self.ctag = content
