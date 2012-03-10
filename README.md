@@ -215,6 +215,7 @@ or
 ## To populate partials:
 
     >>> from Stache import Stache
+    >>> stachio = Stache()
     >>> stachio.add_template('main', 'a = {{a}};')
     >>> stachio.add_template('main1', 'b = [ {{#b}}{{.}} {{/b}}];')
     >>> stachio.add_template('main2', 'stachio')

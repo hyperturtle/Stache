@@ -63,6 +63,9 @@ def test(method=bare):
     yield method, '123abc', '123{{:hi}}abc{{/}}', dict(hi=False)
     yield method, '123abc', '123{{:hi}}abc{{/}}', dict(hi=[])
     yield method, '123test', '{{<hi}}test{{/}}123{{:hi}}abc{{/}}', dict()
+    #iterators:
+    yield method, '0123456789', '{{#a}}{{.}}{{/a}}', dict(a=xrange(10))
+    yield method, '02468', '{{#a}}{{.}}{{/a}}', dict(a=filter(lambda x: x%2==0, xrange(10)))
 
 def verify_partial(stachio, output, template, data={}):
     print "%s with %s" % (template, data)
