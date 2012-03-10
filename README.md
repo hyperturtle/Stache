@@ -3,7 +3,7 @@
 Trimmed mustache logic-less templates
 
 Implements everything from [Mustache.5](http://mustache.github.com/mustache.5.html)
-**except for lambdas** in ~150 lines of code. Plus four new things. Implied closing tags
+**except for lambdas** in < 200 lines of code. Plus four new things. Implied closing tags
 `{{/}}`, Self referencer `{{.}}`, Existence check `{{?exists}}{{/exists}}` and data pusher 
 `{{< blah}}{{/blah}}`, `{{:default}}`
 
