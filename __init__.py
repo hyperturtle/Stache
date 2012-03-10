@@ -74,7 +74,8 @@ class Stache(object):
             partial_tag    = _checkprefix(taglabel, '>') if not comment_tag else None
             push_tag       = _checkprefix(taglabel, '<') if not partial_tag else None
             bool_tag       = _checkprefix(taglabel, '?') if not push_tag else None
-            delim_tag      = re.match('=(.*?) (.*?)=', taglabel) if not bool_tag else None
+            booltern_tag   = _checkprefix(taglabel, ':') if not bool_tag else None
+            delim_tag      = re.match('=(.*?) (.*?)=', taglabel) if not booltern_tag else None
             delim_tag      = delim_tag.groups() if delim_tag else None
 
             if push_tag:
@@ -98,6 +99,10 @@ class Stache(object):
                 if close_tag:
                     assert (current_scope == close_tag), 'Mismatch open/close blocks'
                 yield TOKEN_TAGCLOSE, current_scope, len(scope)+1
+            elif booltern_tag:
+                scope.append(booltern_tag)
+                yield TOKEN_TAG, booltern_tag, 0
+                yield TOKEN_TAGINVERT, booltern_tag, len(scope)
             elif comment_tag:
                 yield TOKEN_TAGCOMMENT, comment_tag, 0
             elif partial_tag:
@@ -118,8 +123,14 @@ class Stache(object):
                 yield str(content)
             elif tag == TOKEN_TAG:
                 tagvalue = _lookup(data, content)
+                #cant use if tagvalue because we need to render tagvalue if it's 0
+                #testing if tagvalue == 0, doesnt work since False == 0
                 if tagvalue is not None and tagvalue is not False:
-                    yield str(tagvalue)
+                    try:
+                        if len(tagvalue) > 0:
+                            yield str(tagvalue)
+                    except TypeError:
+                        yield str(tagvalue)
             elif tag == TOKEN_TAGOPEN or tag == TOKEN_TAGINVERT:
                 tagvalue = _lookup(data, content)
                 untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)

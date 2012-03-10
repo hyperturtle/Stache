@@ -54,6 +54,15 @@ def test(method=bare):
     yield method, '<3><3><3>', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}>', {'id':3,'a?':True, 'b?':True}
     #test delim
     yield method, 'delim{{}}', '{{=<% %>=}}<%a%>{{}}', dict(a='delim')
+    #test :
+    yield method, '123test', '123{{:hi}}abc{{/}}', dict(hi='test')
+    yield method, '123test', '123{{:hi}}{{:hi}}abc{{/}}{{/}}', dict(hi='test')
+    yield method, '123abc', '123{{:hi}}{{:hi2}}abc{{/}}{{/}}', dict()
+    yield method, '123cba', '123{{:hi}}{{:hi2}}abc{{/}}{{/}}', dict(hi2='cba')
+    yield method, '123abc', '123{{:hi}}abc{{/}}', dict()
+    yield method, '123abc', '123{{:hi}}abc{{/}}', dict(hi=False)
+    yield method, '123abc', '123{{:hi}}abc{{/}}', dict(hi=[])
+    yield method, '123test', '{{<hi}}test{{/}}123{{:hi}}abc{{/}}', dict()
 
 def verify_partial(stachio, output, template, data={}):
     print "%s with %s" % (template, data)

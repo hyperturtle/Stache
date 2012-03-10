@@ -5,7 +5,7 @@ Trimmed mustache logic-less templates
 Implements everything from [Mustache.5](http://mustache.github.com/mustache.5.html)
 **except for lambdas** in ~150 lines of code. Plus four new things. Implied closing tags
 `{{/}}`, Self referencer `{{.}}`, Existence check `{{?exists}}{{/exists}}` and data pusher 
-`{{< blah}}{{/blah}}`
+`{{< blah}}{{/blah}}`, `{{:default}}`
 
 # Why?
 
@@ -102,6 +102,12 @@ which would render
     stuff
     stuff
 
+## {{:default}}stuff{{/}}
+
+This is equivalent to `{{default}}{{^default}}stuff{{/}}`
+
+It renders the enclosed section if default doesn't exist, empty or false
+
 ## {{<thing}} Pusher {{/thing}}
 
 It renders the inner block and adds it to the global scope.
@@ -154,7 +160,7 @@ footer
 </div>
 ```
 
-You can also apply the inverted block to supply default blocks
+You can also apply the inverted block or default block to supply default blocks
 
 #### master =
     
@@ -164,8 +170,7 @@ You can also apply the inverted block to supply default blocks
     </div>
 
     <div id="footer">
-    {{footer}}
-    {{^footer}}Default Footer{{/footer}}
+    {{:footer}}Default Footer{{/footer}}
     </div>
 
 Rendering `{{<footer}}Custom Footer{{/footer}}{{>master}}` with `{}` will produce
