@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='Stache',
-      version='0.0.5',
+      version='0.0.6',
       description='Trimmed mustache logic-less templates',
       author='Linh-Nam Vu',
       author_email='github@l-vu.com',
