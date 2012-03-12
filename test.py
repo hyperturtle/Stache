@@ -2,16 +2,16 @@ from __init__ import Stache, render
 import timeit
 
 def verify(output, template, data):
-    print "%s with %s" % (template, data)
+    print("%s with %s" % (template, data))
     result = render(template, data)
     result_iter = ''.join(Stache().render_iter(template, data))
-    print "Result: %s\n" % result
+    print("Result: %s\n" % result)
     assert result == output
     assert result == result_iter
 
 def bench(output, template, data):
     t = timeit.Timer("render('%s', %s)" % (template, data), "from __main__ import render")
-    print "%.2f\tusec/test > %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data)
+    print("%.2f\tusec/test > %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
 
 def bare(output, template, data):
     return render(template, data)
@@ -73,9 +73,9 @@ def test(method=bare):
     yield method, '><', '{{{a}}}', dict(a='><')
 
 def verify_partial(stachio, output, template, data={}):
-    print "%s with %s" % (template, data)
+    print("%s with %s" % (template, data))
     result = stachio.render_template(template, data)
-    print "Result: %s\n" % result
+    print("Result: %s\n" % result)
     assert output == result
 
 def bare_partial(stachio, output, template, data={}):
@@ -108,11 +108,11 @@ def run(method=bare, partial_method=bare_partial):
         x[0](*x[1:])
 
 if __name__ == '__main__':
-    print 'starting tests'
+    print('starting tests')
     run(verify, verify_partial)
-    print 'finished tests'
-    print 'starting individual benchmarks'
+    print('finished tests')
+    print('starting individual benchmarks')
     run(bench)
-    print 'starting combined benchmark'
+    print('starting combined benchmark')
     t = timeit.Timer("run()", "from __main__ import run, bare")
-    print "%.2f\tusec/all tests" % (1000000 * t.timeit(number=10000)/10000)
+    print("%.2f\tusec/all tests" % (1000000 * t.timeit(number=10000)/10000))
