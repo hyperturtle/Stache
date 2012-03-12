@@ -1,4 +1,8 @@
-from __init__ import Stache, render
+try:
+    from __init__ import Stache, render
+except ImportError:
+    from . import Stache, render
+
 import timeit
 
 def verify(output, template, data):
