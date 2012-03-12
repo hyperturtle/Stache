@@ -1,5 +1,6 @@
-import re
 import itertools
+
+from cgi import escape
 
 TOKEN_RAW        = intern('raw')
 TOKEN_TAGOPEN    = intern('tagopen')
@@ -75,8 +76,12 @@ class Stache(object):
             push_tag       = _checkprefix(taglabel, '<') if not partial_tag else None
             bool_tag       = _checkprefix(taglabel, '?') if not push_tag else None
             booltern_tag   = _checkprefix(taglabel, ':') if not bool_tag else None
-            delim_tag      = re.match('=(.*?) (.*?)=', taglabel) if not booltern_tag else None
-            delim_tag      = delim_tag.groups() if delim_tag else None
+            unescape_tag   = _checkprefix(taglabel, '{') if not booltern_tag else None
+            rest           = rest[1:] if unescape_tag else rest
+            unescape_tag   = (unescape_tag or _checkprefix(taglabel, '&')) if not booltern_tag else None
+            delim_tag      = taglabel[1:-1] if not unescape_tag and len(taglabel) >= 2 and taglabel[0] == '=' and taglabel[-1] == '=' else None
+            delim_tag      = delim_tag.split(' ', 1) if delim_tag else None
+            delim_tag      = delim_tag if delim_tag and len(delim_tag) == 2 else None
 
             if push_tag:
                 pre = pre.rstrip()
@@ -112,8 +117,10 @@ class Stache(object):
                 yield TOKEN_PUSH, push_tag, len(scope)
             elif delim_tag:
                 yield TOKEN_TAGDELIM, delim_tag, 0
+            elif unescape_tag:
+                yield TOKEN_TAG, unescape_tag, True
             else:
-                yield TOKEN_TAG, taglabel, 0
+                yield TOKEN_TAG, taglabel, False
 
     def _parse(self, tokens, *data):
         for token in tokens:
@@ -128,9 +135,15 @@ class Stache(object):
                 if tagvalue is not None and tagvalue is not False:
                     try:
                         if len(tagvalue) > 0:
-                            yield str(tagvalue)
+                            if scope:
+                                yield str(tagvalue)
+                            else:
+                                yield escape(str(tagvalue))
                     except TypeError:
-                        yield str(tagvalue)
+                        if scope:
+                            yield str(tagvalue)
+                        else:
+                            yield escape(str(tagvalue))
             elif tag == TOKEN_TAGOPEN or tag == TOKEN_TAGINVERT:
                 tagvalue = _lookup(data, content)
                 untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
