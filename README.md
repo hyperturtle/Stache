@@ -1,3 +1,5 @@
+[![Build Status](https://secure.travis-ci.org/hyperturtle/Stache.png)](http://travis-ci.org/hyperturtle/Stache)
+
 # Stache
 
 Trimmed mustache logic-less templates
@@ -20,7 +22,11 @@ mine was slightly faster, around 2x to 3x.
 
 ## {{tag}}
 
-Renders the value of tag within the current scope
+Renders the value of tag, html escaped, within the current scope
+
+## {{{unescape}}} & {{&unescape}}
+
+Don't html escape the value
 
 ## {{#section}}{{/section}}
 
