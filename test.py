@@ -69,8 +69,8 @@ def test(method=bare):
     yield method, '123abc', '123{{:hi}}abc{{/}}', dict(hi=[])
     yield method, '123test', '{{<hi}}test{{/}}123{{:hi}}abc{{/}}', dict()
     #iterators:
-    yield method, '0123456789', '{{#a}}{{.}}{{/a}}', dict(a=xrange(10))
-    yield method, '02468', '{{#a}}{{.}}{{/a}}', dict(a=filter(lambda x: x%2==0, xrange(10)))
+    yield method, '0123456789', '{{#a}}{{.}}{{/a}}', dict(a=range(10))
+    yield method, '02468', '{{#a}}{{.}}{{/a}}', dict(a=filter(lambda x: x%2==0, range(10)))
     #escaping
     yield method, '&gt;&lt;', '{{a}}', dict(a='><')
     yield method, '><', '{{&a}}', dict(a='><')
