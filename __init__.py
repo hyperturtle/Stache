@@ -1,6 +1,10 @@
 import itertools
-
 from cgi import escape
+
+try:
+    from sys import intern
+except ImportError:
+    pass
 
 TOKEN_RAW        = intern('raw')
 TOKEN_TAGOPEN    = intern('tagopen')
