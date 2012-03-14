@@ -179,7 +179,7 @@ class Stache(object):
                 newparams = "data"
                 prefix = ""
                 if not bare and self.hoist_data:
-                    hoisted = map(lambda x: '"{0}": {1}, '.format(x, self.hoist_data[x], "baseData"), self.hoist_data.iterkeys()) 
+                    hoisted = map(lambda x: '"{0}": {1}, '.format(x, self.hoist_data[x], "baseData"), self.hoist_data.keys()) 
                     prefix = ' var data = [dat2, {{{0}}}];'.format(', '.join(hoisted))
                     self.hoist_data = {}
                     newparams = 'dat2';
