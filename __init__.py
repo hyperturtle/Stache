@@ -174,23 +174,23 @@ class Stache(object):
 
         if self.templates:
             hoist += "\n  var templates = {};\n"
-            for name, fn in self.templates.iteritems():
-                render_function = list(self._jsparse(iter(list(fn))))
+            for name in self.templates:
+                render_function = list(self._jsparse(iter(list(self.templates[name]))))
                 newparams = "data"
                 prefix = ""
                 if not bare and self.hoist_data:
-                    hoisted = map(lambda x: '"{0}": {1}, '.format(x[0], x[1], "baseData"), self.hoist_data.iteritems()) 
+                    hoisted = map(lambda x: '"{0}": {1}, '.format(x, self.hoist_data[x], "baseData"), self.hoist_data.iterkeys()) 
                     prefix = ' var data = [dat2, {{{0}}}];'.format(', '.join(hoisted))
                     self.hoist_data = {}
                     newparams = 'dat2';
                 hoist += '  templates["{0}"] = {1};\n'.format(name, _renderjsfunction(render_function, prefix=prefix, params=newparams))
         if self.hoist:
-            for name, fn in self.hoist.iteritems():
-                hoist += '  var {0} = {1};\n'.format(name, fn)
+            for name in self.hoist:
+                hoist += '  var {0} = {1};\n'.format(name, self.hoist[name])
         if bare:
             if self.hoist_data:
-                for name, fn in self.hoist_data.iteritems():
-                    hoist += '  {2}["{0}"] = {1};\n'.format(name, fn, "data")
+                for name in self.hoist_data:
+                    hoist += '  {2}["{0}"] = {1};\n'.format(name, self.hoist_data[name], "data")
 
         return hoist
 
