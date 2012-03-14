@@ -9,6 +9,31 @@ Implements everything from [Mustache.5](http://mustache.github.com/mustache.5.ht
 `{{/}}`, Self referencer `{{.}}`, Existence check `{{?exists}}{{/exists}}` and data pusher 
 `{{< blah}}{{/blah}}`, `{{:default}}`
 
+# Also, the ability to compile to javascript code!
+
+## render_js(template_string)
+
+Compiles an inline script to javascript code
+
+## Stache().render_js_template(template_name)
+
+Compiles all the templates and sets the entry point to the template name
+
+## render_all_js()
+
+Compiles all the templates and returns a template object.
+
+```python
+stachio = Stache()
+stachio.add_template('template_name', templatefile.read())
+write('var t = ' + stachio.render_all_js() ';')
+```
+
+```javascript
+var content = t['template_name']([{myparams:3}])
+$("#container").html(content)
+```
+
 # Why?
 
 Because the current [Pystache](https://github.com/defunkt/pystache) implementation
