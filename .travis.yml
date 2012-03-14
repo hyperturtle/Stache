@@ -7,8 +7,6 @@ python:
   - "3.2"
 node:
   - "0.6"
-install:
-  - pip install simplejson --use-mirrors
 # command to install dependencies
 #install: pip install -r requirements.txt --use-mirrors
 # command to run tests

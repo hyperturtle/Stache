@@ -6,13 +6,6 @@ except ImportError:
 import timeit
 import subprocess
 
-try:
-    import json
-except ImportError:
-    import simplejson as json
-
-
-
 def verify(output, template, data):
     print("%s with %s" % (template, data))
     result = render(template, data)
@@ -22,6 +15,7 @@ def verify(output, template, data):
     assert result == result_iter
 
 def verify_js(output, template, data):
+    import json
     script = render_js(template)
     print("%s with %s" % (template, data))
     result = subprocess.check_output(["node", "-e", "console.log({0}({1}))".format(script,  json.dumps(data))]).strip()
@@ -35,6 +29,7 @@ def verify_partial(stachio, output, template, data={}):
     assert output == result
 
 def verify_js_partial(stachio, output, template, data={}):
+    import json
     print("%s with %s" % (template, data))
     script = stachio.render_js_template(template)
     result = subprocess.check_output(["node", "-e", "console.log({0}({1}))".format(script,  json.dumps(data))]).strip()
