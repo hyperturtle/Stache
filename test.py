@@ -5,7 +5,11 @@ except ImportError:
 
 import timeit
 import subprocess
-import json
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
 
 
 
