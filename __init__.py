@@ -100,7 +100,10 @@ BOOTSRAP_POST = """
 
 
 def _checkprefix(tag, prefix):
-    return tag[1:].strip() if tag and tag[0] == prefix else None
+    if tag and tag[0] == prefix:
+        return tag[1:].strip()
+    else:
+        return None
 
 
 def _lookup(data, datum):
@@ -221,23 +224,72 @@ class Stache(object):
 
         while rest and len(rest) > 0:
             pre_section    = rest.split(self.otag, 1)
-            pre, rest      = pre_section if len(pre_section) == 2 else (pre_section[0], None)
-            taglabel, rest = rest.split(self.ctag, 1) if rest else (None, None)
-            taglabel       = taglabel.strip() if taglabel else ''
+            
+            
+            if len(pre_section) == 2:
+                pre, rest = pre_section
+            else:
+                pre, rest = (pre_section[0], None)
+            if rest:
+                taglabel, rest = rest.split(self.ctag, 1)
+            else:
+                taglabel, rest = (None, None)
+            
+            if taglabel:
+                taglabel = taglabel.strip()
+            else:
+                taglabel = ''
             open_tag       = _checkprefix(taglabel, '#')
-            invert_tag     = _checkprefix(taglabel, '^') if not open_tag else None
-            close_tag      = _checkprefix(taglabel, '/') if not invert_tag else None
-            comment_tag    = _checkprefix(taglabel, '!') if not close_tag else None
-            partial_tag    = _checkprefix(taglabel, '>') if not comment_tag else None
-            push_tag       = _checkprefix(taglabel, '<') if not partial_tag else None
-            bool_tag       = _checkprefix(taglabel, '?') if not push_tag else None
-            booltern_tag   = _checkprefix(taglabel, ':') if not bool_tag else None
-            unescape_tag   = _checkprefix(taglabel, '{') if not booltern_tag else None
-            rest           = rest[1:] if unescape_tag else rest
-            unescape_tag   = (unescape_tag or _checkprefix(taglabel, '&')) if not booltern_tag else None
-            delim_tag      = taglabel[1:-1] if not unescape_tag and len(taglabel) >= 2 and taglabel[0] == '=' and taglabel[-1] == '=' else None
-            delim_tag      = delim_tag.split(' ', 1) if delim_tag else None
-            delim_tag      = delim_tag if delim_tag and len(delim_tag) == 2 else None
+            if not open_tag:
+                invert_tag = _checkprefix(taglabel, '^')
+            else:
+                invert_tag = None
+            if not invert_tag:
+                close_tag      = _checkprefix(taglabel, '/')
+            else:
+                close_tag      = None
+            comment_tag    = None
+            partial_tag    = None
+            push_tag       = None
+            bool_tag       = None
+            booltern_tag   = None
+            unescape_tag   = None
+                
+            if not close_tag:
+                comment_tag    = _checkprefix(taglabel, '!')
+            if not comment_tag:
+                partial_tag    = _checkprefix(taglabel, '>')
+            if not partial_tag:
+                push_tag       = _checkprefix(taglabel, '<')
+            if not push_tag:
+                bool_tag       = _checkprefix(taglabel, '?')
+            if not bool_tag:
+                booltern_tag   = _checkprefix(taglabel, ':')
+            if not booltern_tag:
+                unescape_tag   = _checkprefix(taglabel, '{')
+            
+            if unescape_tag:
+                rest           = rest[1:]
+            else:
+                rest           = rest # FIXME seems like a NOOP
+            
+            if not booltern_tag:
+                unescape_tag   = (unescape_tag or _checkprefix(taglabel, '&'))
+            else:
+                unescape_tag   = None
+            if not unescape_tag and len(taglabel) >= 2 and taglabel[0] == '=' and taglabel[-1] == '=':
+                delim_tag      = taglabel[1:-1]                
+            else:
+                delim_tag      = None
+            if delim_tag:
+                delim_tag      = delim_tag.split(' ', 1)
+            else:
+                delim_tag      = None
+            
+            if delim_tag and len(delim_tag) == 2:
+                delim_tag      = delim_tag
+            else:
+                delim_tag      = None
 
             if push_tag:
                 pre = pre.rstrip()

@@ -1,10 +1,15 @@
-try:
-    from __init__ import Stache, render, render_js
-except ImportError:
-    from . import Stache, render, render_js
-
 import timeit
 import subprocess
+import warnings
+
+try:
+    import json
+except ImportError:
+    # TODO import simplejson, etc.
+    json = None
+
+from __init__ import Stache, render, render_js
+
 
 def verify(output, template, data):
     print("%s with %s" % (template, data))
@@ -15,26 +20,36 @@ def verify(output, template, data):
     assert result == result_iter
 
 def verify_js(output, template, data):
-    import json
+    if json is None:
+        warnings.warn('json module missing, skipping this js test')
+        return
     script = render_js(template)
     print("%s with %s" % (template, data))
     result = subprocess.check_output(["node", "-e", "console.log({0}({1}))".format(script,  json.dumps(data))]).strip()
     print("Result: %s\n" % result)
     assert output.lower() == result
 
-def verify_partial(stachio, output, template, data={}):
-    print("%s with %s" % (template, data))
-    result = stachio.render_template(template, data)
-    print("Result: %s\n" % result)
-    assert output == result
-
 def verify_js_partial(stachio, output, template, data={}):
-    import json
+    if json is None:
+        warnings.warn('json module missing, skipping this js test')
+        return
     print("%s with %s" % (template, data))
     script = stachio.render_js_template(template)
     result = subprocess.check_output(["node", "-e", "console.log({0}({1}))".format(script,  json.dumps(data))]).strip()
     print("Result: %s\n" % result)
     assert output.lower() == result
+
+def bare_js_partial(stachio, output, template, data={}):
+    if json is None:
+        warnings.warn('json module missing, skipping this js test')
+        return
+    return stachio.render_js_template(template)
+
+def verify_partial(stachio, output, template, data={}):
+    print("%s with %s" % (template, data))
+    result = stachio.render_template(template, data)
+    print("Result: %s\n" % result)
+    assert output == result
 
 def bench(output, template, data):
     t = timeit.Timer("render('%s', %s)" % (template, data), "from __main__ import render")
@@ -60,9 +75,6 @@ def bare_js(output, template, data):
 
 def bare_partial(stachio, output, template, data={}):
     return stachio.render_template(template, data)
-
-def bare_js_partial(stachio, output, template, data={}):
-    return stachio.render_js_template(template)
 
 def test(method=bare):
     # test tag lookup
