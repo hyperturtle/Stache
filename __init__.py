@@ -1,5 +1,22 @@
-import itertools
+import sys
 from cgi import escape
+
+try:
+    raise ImportError
+    import itertools
+    itertools_takewhile = itertools.takewhile
+except ImportError:
+    # fake it
+
+    def takewhile(predicate, iterable):
+        # takewhile(lambda x: x<5, [1,4,6,4,1]) --> 1 4
+        for x in iterable:
+            if predicate(x):
+                yield x
+            else:
+                break
+
+    itertools_takewhile = takewhile
 
 
 try:
@@ -354,7 +371,7 @@ class Stache(object):
                             yield escape(str(tagvalue))
             elif tag == TOKEN_TAGOPEN or tag == TOKEN_TAGINVERT:
                 tagvalue = _lookup(data, content)
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 if (tag == TOKEN_TAGOPEN and tagvalue) or (tag == TOKEN_TAGINVERT and not tagvalue):
                     if hasattr(tagvalue, 'items'):
                         #print '    its a dict!', tagvalue, untilclose
@@ -382,7 +399,7 @@ class Stache(object):
                         pass
             elif tag == TOKEN_BOOL:
                 tagvalue = _lookup(data, content)
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 if tagvalue:
                     for part in self._parse(untilclose, *data):
                         yield part
@@ -394,7 +411,7 @@ class Stache(object):
                     for part in self._parse(iter(list(self.templates[content])), *data):
                         yield part
             elif tag == TOKEN_PUSH:
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 data[-1][content] = ''.join(self._parse(untilclose, *data))
             elif tag == TOKEN_TAGDELIM:
                 self.otag, self.ctag = content
@@ -413,7 +430,7 @@ class Stache(object):
                     else:
                         yield "htmlEncode(lookup(data, '{0}'))".format(content)
             elif tag == TOKEN_TAGOPEN or tag == TOKEN_TAGINVERT or tag == TOKEN_BOOL:
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 inside = self._jsparse(untilclose)
                 if tag == TOKEN_TAGOPEN:
                     pre = "return section(data, lookup(data, tag), function (data) {"
@@ -433,7 +450,7 @@ class Stache(object):
             elif tag == TOKEN_PARTIAL:
                 yield "templates['{0}'](data)".format(content)
             elif tag == TOKEN_PUSH:
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 self.hoist_data[content] = _renderjsfunction(self._jsparse(untilclose), params="data")
             elif tag == TOKEN_TAGDELIM:
                 self.otag, self.ctag = content

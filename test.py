@@ -1,6 +1,15 @@
-import timeit
-import subprocess
+from __future__ import generators
+import sys
 import warnings
+try:
+    import timeit
+except ImportError:
+    # TODO fake it?
+    timeit = None
+try:
+    import subprocess
+except ImportError:
+    subprocess = None
 
 try:
     import json
@@ -11,10 +20,16 @@ except ImportError:
 from __init__ import Stache, render, render_js
 
 
+skip_bool = False
+if sys.version_info < (2, 3):
+    skip_bool = True
+
+
 def verify(output, template, data):
     print("%s with %s" % (template, data))
     result = render(template, data)
     result_iter = ''.join(Stache().render_iter(template, data))
+    print("Output: %s\n" % output)
     print("Result: %s\n" % result)
     assert result == output
     assert result == result_iter
@@ -52,18 +67,30 @@ def verify_partial(stachio, output, template, data={}):
     assert output == result
 
 def bench(output, template, data):
+    if timeit is None:
+        warnings.warn('timeit module missing, skipping this test')
+        return
     t = timeit.Timer("render('%s', %s)" % (template, data), "from __main__ import render")
     print("%.2f\tusec/test > python %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
 
 def bench_js(output, template, data):
+    if timeit is None:
+        warnings.warn('timeit module missing, skipping this test')
+        return
     t = timeit.Timer("render_js('%s')" % (template), "from __main__ import render_js")
     print("%.2f\tusec/test > js %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
 
 def bench_partial(stachio, output, template, data={}):
+    if timeit is None:
+        warnings.warn('timeit module missing, skipping this test')
+        return
     t = timeit.Timer("s.render_template('%s', %s)" % (template, data),  "from __main__ import test_partials, s")
     print("%.2f\tusec/test > python partial %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
 
 def bench_js_partial(stachio, output, template, data={}):
+    if timeit is None:
+        warnings.warn('timeit module missing, skipping this test')
+        return
     t = timeit.Timer("s.render_template('%s', %s)" % (template, data),  "from __main__ import test_partials, s")
     print("%.2f\tusec/test > js_partial %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
 
@@ -83,20 +110,24 @@ def test(method=bare):
     yield method, 'ac', 'a{{b}}c', dict(c=10)
     yield method, 'a10c', 'a{{b}}c', dict(b='10')
     yield method, 'acde', 'a{{!b}}cde', dict(b='10')
-    yield method, 'aTrue', 'a{{b}}', dict(b=True)
+    if not skip_bool:
+        yield method, 'aTrue', 'a{{b}}', dict(b=True)
     yield method, 'a123', 'a{{b}}{{c}}{{d}}', dict(b=1,c=2,d=3)
     # test falsy #sections
-    yield method, 'ab', 'a{{#b}}b{{/b}}', dict(b=True)
-    yield method, 'a', 'a{{^b}}b{{/b}}', dict(b=True)
-    yield method, 'a', 'a{{#b}}b{{/}}', dict(b=False)
-    yield method, 'ab', 'a{{^b}}b{{/b}}', dict(b=False)
+    if not skip_bool:
+        yield method, 'ab', 'a{{#b}}b{{/b}}', dict(b=True)
+        yield method, 'a', 'a{{^b}}b{{/b}}', dict(b=True)
+        yield method, 'a', 'a{{#b}}b{{/}}', dict(b=False)
+        yield method, 'ab', 'a{{^b}}b{{/b}}', dict(b=False)
     #test invert sections
     yield method, 'ab', 'a{{#b}}ignore me{{/b}}{{^b}}b{{/}}', dict(b=[])
     yield method, 'ab', 'a{{#b}}b{{/b}}{{^b}}ignore me{{/}}', dict(b=[1])
-    yield method, 'ab', 'a{{#b}}b{{/b}}{{^b}}ignore me{{/}}', dict(b=True)
+    if not skip_bool:
+        yield method, 'ab', 'a{{#b}}b{{/b}}{{^b}}ignore me{{/}}', dict(b=True)
     #test ?sections
     yield method, 'a- 1 2 3 4', 'a{{?b}}-{{#b}} {{.}}{{/}}{{/}}', dict(b=[1,2,3,4])
-    yield method, 'a', 'a{{?b}}ignoreme{{/}}', dict(b=False)
+    if not skip_bool:
+        yield method, 'a', 'a{{?b}}ignoreme{{/}}', dict(b=False)
     yield method, 'a', 'a{{?b}}ignoreme{{/}}', dict(b=[])
     yield method, 'a', 'a{{?b}}ignoreme{{/}}', dict()
     yield method, 'abb', 'a{{?b}}b{{/}}{{?b}}b{{/}}', dict(b=[1,2,3])
@@ -111,7 +142,8 @@ def test(method=bare):
     yield method, '132', '{{#a}}{{#b}}{{c}}{{/}}{{/}}', dict(a=[{'b':[{'c':1}, {'c':3}]},{'b':{'c':2}}])
     yield method, '132456', '{{#a}}{{#b}}{{c}}{{/b}}{{/a}}', dict(a=[{'b':[{'c':1}, {'c':3}]},{'b':{'c':2}},{'b':[{'c':4}, {'c':5}]},{'b':{'c':6}}])
     yield method, '1', '{{#a}}{{#a}}{{c}}{{/a}}{{/a}}', dict(a={'a':{'c':1}})
-    yield method, '<3><3><3>', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}>', {'id':3,'a?':True, 'b?':True}
+    if not skip_bool:
+        yield method, '<3><3><3>', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}>', {'id':3,'a?':True, 'b?':True}
     #test delim
     yield method, 'delim{{a}}', '{{=<% %>=}}<%a%>{{a}}', dict(a='delim')
     yield method, 'delim{{a}}delim<%a%>', '{{=<% %>=}}<%a%>{{a}}<%={{ }}=%>{{a}}<%a%>', dict(a='delim')
@@ -121,7 +153,8 @@ def test(method=bare):
     yield method, '123abc', '123{{:hi}}{{:hi2}}abc{{/}}{{/}}', dict()
     yield method, '123cba', '123{{:hi}}{{:hi2}}abc{{/}}{{/}}', dict(hi2='cba')
     yield method, '123abc', '123{{:hi}}abc{{/}}', dict()
-    yield method, '123abc', '123{{:hi}}abc{{/}}', dict(hi=False)
+    if not skip_bool:
+        yield method, '123abc', '123{{:hi}}abc{{/}}', dict(hi=False)
     yield method, '123abc', '123{{:hi}}abc{{/}}', dict(hi=[])
     yield method, '123test', '{{<hi}}test{{/}}123{{:hi}}abc{{/}}', dict()
     #iterators
@@ -163,8 +196,9 @@ def test_partials(method=bare_partial):
     yield method, s, 'showme', 'j', dict()
     yield method, s, 'default', 'k', dict()
     yield method, s, 'custom', 'k', dict(e="custom")
-    yield method, s, '<3><3><3>', 'l', {'id':3,'a':True, 'b':True}
-    yield method, s, '<3><3><3>', 'm', {'id':3,'a?':True, 'b?':True}
+    if not skip_bool:
+        yield method, s, '<3><3><3>', 'l', {'id':3,'a':True, 'b':True}
+        yield method, s, '<3><3><3>', 'm', {'id':3,'a?':True, 'b?':True}
     yield method, s, 'abb', 'n', dict(b=[1,2,3])
     yield method, s, 'ab123d', 'o', dict(b=[1,2,3])
 
@@ -207,10 +241,13 @@ if __name__ == '__main__':
     test_js_all()
     print('starting individual benchmarks')
     run(bench, bench_partial, bench_js, bench_js_partial)
-    print('starting combined python benchmark')
-    t = timeit.Timer("run(method_js=null, method_js_partial=null)", "from __main__ import run, bare, null")
-    print("%.2f\tusec/all tests" % (1000000 * t.timeit(number=10000)/10000))
-    print('starting combined js benchmark')
-    t = timeit.Timer("run(method=null, method_partial=null)", "from __main__ import run, bare, null")
-    print("%.2f\tusec/all js tests" % (1000000 * t.timeit(number=10000)/10000))
+    if timeit is None:
+        warnings.warn('timeit module missing, skipping this test')
+    else:
+        print('starting combined python benchmark')
+        t = timeit.Timer("run(method_js=null, method_js_partial=null)", "from __main__ import run, bare, null")
+        print("%.2f\tusec/all tests" % (1000000 * t.timeit(number=10000)/10000))
+        print('starting combined js benchmark')
+        t = timeit.Timer("run(method=null, method_partial=null)", "from __main__ import run, bare, null")
+        print("%.2f\tusec/all js tests" % (1000000 * t.timeit(number=10000)/10000))
 
