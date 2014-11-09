@@ -32,7 +32,7 @@ def verify_js_partial(stachio, output, template, data={}):
     import json
     print("%s with %s" % (template, data))
     script = stachio.render_js_template(template)
-    result = subprocess.check_output(["node", "-e", "console.log({0}({1}))".format(script,  json.dumps(data))]).strip()
+    result = subprocess.check_output(["node", "-e", "console.log({0}({1}))".format(script, json.dumps(data))]).strip().decode("utf-8")
     print("Result: %s\n" % result)
     assert output.lower() == result
 
