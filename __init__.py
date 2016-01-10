@@ -25,7 +25,7 @@ try:
 except ImportError:
     pass
 
-string_func = str
+string_func = unicode
 
 TOKEN_RAW        = intern('raw')
 TOKEN_TAGOPEN    = intern('tagopen')
