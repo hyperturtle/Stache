@@ -25,6 +25,8 @@ try:
 except ImportError:
     pass
 
+string_func = str
+
 TOKEN_RAW        = intern('raw')
 TOKEN_TAGOPEN    = intern('tagopen')
 TOKEN_TAGINVERT  = intern('taginvert')
@@ -127,7 +129,7 @@ def _checkprefix(tag, prefix):
 def _lookup(data, datum):
     for scope in data:
         if datum == '.':
-            return str(scope)
+            return string_func(scope)
         elif datum in scope:
             return scope[datum]
         elif hasattr(scope, datum):
@@ -350,10 +352,10 @@ class Stache(object):
 
     def _parse(self, tokens, *data):
         for token in tokens:
-            #print '    token:' + str(token)
+            #print '    token:' + string_func(token)
             tag, content, scope = token
             if tag == TOKEN_RAW:
-                yield str(content)
+                yield string_func(content)
             elif tag == TOKEN_TAG:
                 tagvalue = _lookup(data, content)
                 #cant use if tagvalue because we need to render tagvalue if it's 0
@@ -362,14 +364,14 @@ class Stache(object):
                     try:
                         if len(tagvalue) > 0:
                             if scope:
-                                yield str(tagvalue)
+                                yield string_func(tagvalue)
                             else:
-                                yield escape(str(tagvalue))
+                                yield escape(string_func(tagvalue))
                     except TypeError:
                         if scope:
-                            yield str(tagvalue)
+                            yield string_func(tagvalue)
                         else:
-                            yield escape(str(tagvalue))
+                            yield escape(string_func(tagvalue))
             elif tag == TOKEN_TAGOPEN or tag == TOKEN_TAGINVERT:
                 tagvalue = _lookup(data, content)
                 untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
@@ -423,7 +425,7 @@ class Stache(object):
         for token in tokens:
             tag, content, scope = token
             if tag == TOKEN_RAW:
-                yield "'{0}'".format(str(content))
+                yield "'{0}'".format(string_func(content))
             elif tag == TOKEN_TAG:
                 if content != '':
                     if scope:
