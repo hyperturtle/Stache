@@ -317,6 +317,61 @@ class Stache(object):
             else:
                 delim_tag      = None
 
+            # fix for https://github.com/hyperturtle/Stache/issues/2 from https://github.com/SmithSamuelM/staching/commit/f2c591ec69cc922c6ffec67e0d66f8047f2f2bf3
+            if  (   open_tag or invert_tag or comment_tag or
+                    partial_tag or push_tag or bool_tag or
+                    booltern_tag or unescape_tag or delim_tag): # not a variable
+                inline = False
+                if rest: # strip trailing whitespace and linefeed if present
+                    front, sep, back = rest.partition("\n") # partition at linefeed
+                    if sep:
+                        if not front.strip(): # only whitespace before linefeed
+                            rest = back # removed whitespace and linefeed
+                            #if _debug: print( "open rest strip front: \n%s" %  rest)
+                        else: #inline
+                            inline = True
+                            #if _debug: print( "open inline:")
+                if not inline and pre: #strip trailing whitespace after linefeed if present
+                    front, sep, back = pre.rpartition("\n")
+                    if sep:
+                        if not back.strip(): # only whitespace after linefeed
+                            pre = ''.join((front, sep)) # restore linefeed
+                            #if _debug: print( "open pre strip back: \n%s" % pre)
+                    else:
+                        pre = back.rstrip() #no linefeed so rstrip
+                        #if _debug: print( "open pre rstrip back: \n%s" % pre)
+
+            elif close_tag:
+                inline = True # section is inline
+                follow = False # followed by inline
+                post = ''
+
+                if rest: # see if inline follows
+                    front, sep, back = rest.partition("\n")
+                    if front.strip(): # not empty before linefeed so inline follows
+                        follow = True # inline follows
+                        #if _debug: print( "close follow:")
+
+                if pre: #strip trailing whitespace after prev linefeed if present
+                    front, sep, back = pre.rpartition("\n")
+                    if sep and not back.strip(): # only whitespace after linefeed
+                        inline = False
+                        #if _debug: print() "close not inline:" )
+                        if follow:
+                            post = back # save spacing for following inline
+                        pre = ''.join((front, sep)) # restore upto linefeed
+                        #if _debug: print( "close pre strip back: \n%s" % pre)
+
+                if not inline and rest: # strip trailing whitespace and linefeed if present
+                    if follow: # restore saved spacing
+                        rest = post + rest
+                        #print( "close follow rest: \n%s" %  rest)
+                    front, sep, back = rest.partition("\n") # partition at linefeed
+                    if sep:
+                        if not front.strip(): # only whitespace before linefeed
+                            rest = back # remove trailing whitespace and linefeed
+                            #if _debug: print( "close rest strip front: \n%s" %  rest)
+
             if push_tag:
                 pre = pre.rstrip()
                 rest = rest.lstrip()
