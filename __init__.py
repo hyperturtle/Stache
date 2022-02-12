@@ -25,7 +25,13 @@ try:
 except ImportError:
     pass
 
-string_func = unicode
+py_ver = sys.version[:3]
+py_v3 = py_ver >= '3.0'
+
+if py_v3:
+    string_func = str
+else:
+    string_func = unicode
 
 TOKEN_RAW        = intern('raw')
 TOKEN_TAGOPEN    = intern('tagopen')

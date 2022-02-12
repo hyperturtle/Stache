@@ -9,6 +9,8 @@ Implements everything from [Mustache.5](http://mustache.github.com/mustache.5.ht
 `{{/}}`, Self referencer `{{.}}`, Existence check `{{?exists}}{{/exists}}` and data pusher 
 `{{< blah}}{{/blah}}`, `{{:default}}`
 
+Works with Cpython 2.2 up to and including Python 3.x. Also works with Jython 2.x.
+
 # Also, the ability to compile to javascript code!
 
 ## render_js(template_string)
