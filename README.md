@@ -4,12 +4,14 @@
 
 Trimmed mustache logic-less templates
 
+Fork of https://github.com/hyperturtle/Stache with support for Cpython 2.2 up to and including Python 3.x. Also works with Jython 2.x.
+Also see https://github.com/SmithSamuelM/staching which includes a fix for https://github.com/hyperturtle/Stache/issues/2 but doesn't support older Python versions, use if older Python support is not required.
+
 Implements everything from [Mustache.5](http://mustache.github.com/mustache.5.html)
 **except for lambdas** in < 200 lines of code. Plus four new things. Implied closing tags
 `{{/}}`, Self referencer `{{.}}`, Existence check `{{?exists}}{{/exists}}` and data pusher 
 `{{< blah}}{{/blah}}`, `{{:default}}`
 
-Works with Cpython 2.2 up to and including Python 3.x. Also works with Jython 2.x.
 
 # Also, the ability to compile to javascript code!
 
