@@ -224,9 +224,17 @@ Custom Footer
 
     pip install stache
 
+Optionally install Nose for running nosetests, there is a regular unittest that does not require nose).
+
+    pip install nose
+
 # Test
 
-You can run `python test.py` or if you have nosetests:
+Pure python tests can be ran with:
+
+    python testsuite.py
+
+The Python and javascript tests can be ran with `python test.py` or if you have nosetests:
 
     cd stache
     nosetests
