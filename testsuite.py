@@ -28,8 +28,7 @@ class verify(BaseTest):
         #assert result == result_iter
         self.assertEqual(result, result_iter)
 
-
-
+    # test tag lookup
     def test_verify_01(self):
         self.stache_verify('a10c', 'a{{b}}c', {'b': 10})
 
@@ -58,6 +57,7 @@ class verify(BaseTest):
         self.stache_verify('a123', 'a{{b}}{{c}}{{d}}', {'c': 2, 'b': 1, 'd': 3})
 
 
+    # test falsy #sections
     def test_verify_08(self):
         self.stache_verify('ab', 'a{{#b}}b{{/b}}', {'b': True})
 
@@ -74,6 +74,7 @@ class verify(BaseTest):
         self.stache_verify('ab', 'a{{^b}}b{{/b}}', {'b': False})
 
 
+    #test invert sections
     def test_verify_12(self):
         self.stache_verify('ab', 'a{{#b}}ignore me{{/b}}{{^b}}b{{/}}', {'b': []})
 
@@ -86,6 +87,7 @@ class verify(BaseTest):
         self.stache_verify('ab', 'a{{#b}}b{{/b}}{{^b}}ignore me{{/}}', {'b': True})
 
 
+    #test ?sections
     def test_verify_15(self):
         self.stache_verify('a- 1 2 3 4', 'a{{?b}}-{{#b}} {{.}}{{/}}{{/}}', {'b': [1, 2, 3, 4]})
 
@@ -110,6 +112,7 @@ class verify(BaseTest):
         self.stache_verify('ab123d', 'a{{?b}}b{{#b}}{{.}}{{/}}d{{/}}', {'b': [1, 2, 3]})
 
 
+    #test #section scope
     def test_verify_21(self):
         self.stache_verify('abbbb', 'a{{#b}}b{{/b}}', {'b': [1, 2, 3, 4]})
 
@@ -150,6 +153,7 @@ class verify(BaseTest):
         self.stache_verify('<3><3><3>', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}>', {'b?': True, 'id': 3, 'a?': True})
 
 
+    #test delim
     def test_verify_31(self):
         self.stache_verify('delim{{a}}', '{{=<% %>=}}<%a%>{{a}}', {'a': 'delim'})
 
@@ -158,6 +162,7 @@ class verify(BaseTest):
         self.stache_verify('delim{{a}}delim<%a%>', '{{=<% %>=}}<%a%>{{a}}<%={{ }}=%>{{a}}<%a%>', {'a': 'delim'})
 
 
+    #test :
     def test_verify_33(self):
         self.stache_verify('123test', '123{{:hi}}abc{{/}}', {'hi': 'test'})
 
@@ -190,6 +195,7 @@ class verify(BaseTest):
         self.stache_verify('123test', '{{<hi}}test{{/}}123{{:hi}}abc{{/}}', {})
 
 
+    #iterators
     def test_verify_41(self):
         self.stache_verify('0123456789', '{{#a}}{{.}}{{/a}}', {'a': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]})
 
@@ -198,6 +204,7 @@ class verify(BaseTest):
         self.stache_verify('02468', '{{#a}}{{.}}{{/a}}', {'a': [0, 2, 4, 6, 8]})
 
 
+    #escaping
     def test_verify_43(self):
         self.stache_verify('&gt;&lt;', '{{a}}', {'a': '><'})
 
