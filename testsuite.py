@@ -1,3 +1,16 @@
+import os
+import string
+import sys
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+
+
+import stache
+from stache import render, Stache
+
+
 # start generated code
 class BaseTest(unittest.TestCase):
     pass
