@@ -1,224 +1,202 @@
-from __future__ import generators
-import sys
-import warnings
-try:
-    import timeit
-except ImportError:
-    # TODO fake it?
-    timeit = None
-try:
-    import subprocess
-except ImportError:
-    subprocess = None
-
-try:
-    import json
-except ImportError:
-    # TODO import simplejson, etc.
-    json = None
-
-from stache import Stache, render, render_js
-
-
-skip_bool = False
-if sys.version_info < (2, 3):
-    skip_bool = True
-
-def mydict(*args, **kwargs):
-    """Emulate Python 2.3 dict keyword support
-    """
-    if args:
-        raise NotImplementedError('args not supported')
-    if kwargs:
-        return kwargs
-    else:
-        return {}
-
-def verify(output, template, data):
-    print("%s with %s" % (template, data))
-    result = render(template, data)
-    result_iter = ''.join(Stache().render_iter(template, data))
-    print("Output: %s\n" % output)
-    print("Result: %s\n" % result)
-    assert result == output
-    assert result == result_iter
-
-def verify_partial(stachio, output, template, data={}):
-    print("%s with %s" % (template, data))
-    result = stachio.render_template(template, data)
-    print("Result: %s\n" % result)
-    assert output == result
-
-def bench(output, template, data):
-    if timeit is None:
-        warnings.warn('timeit module missing, skipping this test')
-        return
-    t = timeit.Timer("render('%s', %s)" % (template, data), "from __main__ import render")
-    print("%.2f\tusec/test > python %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
-
-def bench_js(output, template, data):
-    if timeit is None:
-        warnings.warn('timeit module missing, skipping this test')
-        return
-    t = timeit.Timer("render_js('%s')" % (template), "from __main__ import render_js")
-    print("%.2f\tusec/test > js %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
-
-def bench_partial(stachio, output, template, data={}):
-    if timeit is None:
-        warnings.warn('timeit module missing, skipping this test')
-        return
-    t = timeit.Timer("s.render_template('%s', %s)" % (template, data),  "from __main__ import test_partials, s")
-    print("%.2f\tusec/test > python partial %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
-
-def bench_js_partial(stachio, output, template, data={}):
-    if timeit is None:
-        warnings.warn('timeit module missing, skipping this test')
-        return
-    t = timeit.Timer("s.render_template('%s', %s)" % (template, data),  "from __main__ import test_partials, s")
-    print("%.2f\tusec/test > js_partial %s with %s" % (1000000 * t.timeit(number=10000)/10000, template, data))
-
-def bare(output, template, data):
-    return render(template, data)
-
-def bare_partial(stachio, output, template, data={}):
-    return stachio.render_template(template, data)
-
-def test(method=bare):
-    # test tag lookup
-    yield method, 'a10c', 'a{{b}}c', mydict(b=10)
-    yield method, 'a10c', 'a{{b}}c', mydict(b=10)
-    yield method, 'ac', 'a{{b}}c', mydict(c=10)
-    yield method, 'a10c', 'a{{b}}c', mydict(b='10')
-    yield method, 'acde', 'a{{!b}}cde', mydict(b='10')
-    if not skip_bool:
-        yield method, 'aTrue', 'a{{b}}', mydict(b=True)
-    yield method, 'a123', 'a{{b}}{{c}}{{d}}', mydict(b=1,c=2,d=3)
-    # test falsy #sections
-    if not skip_bool:
-        yield method, 'ab', 'a{{#b}}b{{/b}}', mydict(b=True)
-        yield method, 'a', 'a{{^b}}b{{/b}}', mydict(b=True)
-        yield method, 'a', 'a{{#b}}b{{/}}', mydict(b=False)
-        yield method, 'ab', 'a{{^b}}b{{/b}}', mydict(b=False)
-    #test invert sections
-    yield method, 'ab', 'a{{#b}}ignore me{{/b}}{{^b}}b{{/}}', mydict(b=[])
-    yield method, 'ab', 'a{{#b}}b{{/b}}{{^b}}ignore me{{/}}', mydict(b=[1])
-    if not skip_bool:
-        yield method, 'ab', 'a{{#b}}b{{/b}}{{^b}}ignore me{{/}}', mydict(b=True)
-    #test ?sections
-    yield method, 'a- 1 2 3 4', 'a{{?b}}-{{#b}} {{.}}{{/}}{{/}}', mydict(b=[1,2,3,4])
-    if not skip_bool:
-        yield method, 'a', 'a{{?b}}ignoreme{{/}}', mydict(b=False)
-    yield method, 'a', 'a{{?b}}ignoreme{{/}}', mydict(b=[])
-    yield method, 'a', 'a{{?b}}ignoreme{{/}}', mydict()
-    yield method, 'abb', 'a{{?b}}b{{/}}{{?b}}b{{/}}', mydict(b=[1,2,3])
-    yield method, 'ab123d', 'a{{?b}}b{{#b}}{{.}}{{/}}d{{/}}', mydict(b=[1,2,3])
-    #test #section scope
-    yield method, 'abbbb', 'a{{#b}}b{{/b}}', mydict(b=[1,2,3,4])
-    yield method, 'a1234', 'a{{#b}}{{.}}{{/b}}', mydict(b=[1,2,3,4])
-    yield method, 'a a=1 a=2 a=0 a', 'a {{#b}}a={{a}} {{/b}}a', mydict(a=0,b=[{'a':1},{'a':2},{'c':1}])
-    yield method, '1', '{{#a}}{{#b}}{{c}}{{/b}}{{/a}}', mydict(a={'b':{'c':1}})
-    yield method, '12', '{{#a}}{{#b}}{{c}}{{/}}{{/a}}', mydict(a={'b':[{'c':1}, {'c':2}]})
-    yield method, '12', '{{#a}}{{#b}}{{c}}{{/b}}{{/}}', mydict(a=[{'b':{'c':1}},{'b':{'c':2}}])
-    yield method, '132', '{{#a}}{{#b}}{{c}}{{/}}{{/}}', mydict(a=[{'b':[{'c':1}, {'c':3}]},{'b':{'c':2}}])
-    yield method, '132456', '{{#a}}{{#b}}{{c}}{{/b}}{{/a}}', mydict(a=[{'b':[{'c':1}, {'c':3}]},{'b':{'c':2}},{'b':[{'c':4}, {'c':5}]},{'b':{'c':6}}])
-    yield method, '1', '{{#a}}{{#a}}{{c}}{{/a}}{{/a}}', mydict(a={'a':{'c':1}})
-    if not skip_bool:
-        yield method, '<3><3><3>', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}>', {'id':3,'a?':True, 'b?':True}
-    #test delim
-    yield method, 'delim{{a}}', '{{=<% %>=}}<%a%>{{a}}', mydict(a='delim')
-    yield method, 'delim{{a}}delim<%a%>', '{{=<% %>=}}<%a%>{{a}}<%={{ }}=%>{{a}}<%a%>', mydict(a='delim')
-    #test :
-    yield method, '123test', '123{{:hi}}abc{{/}}', mydict(hi='test')
-    yield method, '123test', '123{{:hi}}{{:hi}}abc{{/}}{{/}}', mydict(hi='test')
-    yield method, '123abc', '123{{:hi}}{{:hi2}}abc{{/}}{{/}}', mydict()
-    yield method, '123cba', '123{{:hi}}{{:hi2}}abc{{/}}{{/}}', mydict(hi2='cba')
-    yield method, '123abc', '123{{:hi}}abc{{/}}', mydict()
-    if not skip_bool:
-        yield method, '123abc', '123{{:hi}}abc{{/}}', mydict(hi=False)
-    yield method, '123abc', '123{{:hi}}abc{{/}}', mydict(hi=[])
-    yield method, '123test', '{{<hi}}test{{/}}123{{:hi}}abc{{/}}', mydict()
-    #iterators
-    yield method, '0123456789', '{{#a}}{{.}}{{/a}}', mydict(a=range(10))
-    yield method, '02468', '{{#a}}{{.}}{{/a}}', mydict(a=list(filter(lambda x: x%2==0, range(10))))
-    #escaping
-    yield method, '&gt;&lt;', '{{a}}', mydict(a='><')
-    yield method, '><', '{{&a}}', mydict(a='><')
-    yield method, '><', '{{{a}}}', mydict(a='><')
-
-s = Stache()
-s.add_template('a', '1')
-s.add_template('b', '{{>a}}')
-s.add_template('c', '{{>a}}{{>b}}')
-s.add_template('d', '{{#a}}{{b}}{{/a}}')
-s.add_template('e', '{{>d}}')
-s.add_template('f', '{{>e}}')
-s.add_template('g', '{{<e}}123{{/e}}{{e}}')
-s.add_template('h', '{{<e}}123{{/e}}{{>i}}')
-s.add_template('i', 'i={{e}}')
-s.add_template('j', 'show{{!ignoreme}}me')
-s.add_template('k', '{{:e}}default{{/}}')
-s.add_template('l', '<{{id}}><{{# a }}{{id}}{{/ a }}><{{# b }}{{id}}{{/ b }}>')
-s.add_template('m', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}>')
-s.add_template('n', 'a{{?b}}b{{/}}{{?b}}b{{/}}')
-s.add_template('o', 'a{{?b}}b{{#b}}{{.}}{{/}}d{{/}}')
-
-def test_partials(method=bare_partial):
-    yield method, s, '1', 'a', mydict()
-    yield method, s, '1', 'b', mydict()
-    yield method, s, '11', 'c', mydict()
-    yield method, s, '', 'd', mydict()
-    yield method, s, '555', 'd', mydict(a={'b':555})
-    yield method, s, '123', 'g', mydict(a={})
-    yield method, s, '555', 'e', mydict(a={'b':555})
-    yield method, s, '555', 'f', mydict(a={'b':555})
-    yield method, s, 'i=123', 'h', mydict()
-    yield method, s, 'i=', 'i', mydict()
-    yield method, s, 'showme', 'j', mydict()
-    yield method, s, 'default', 'k', mydict()
-    yield method, s, 'custom', 'k', mydict(e="custom")
-    if not skip_bool:
-        yield method, s, '<3><3><3>', 'l', {'id':3,'a':True, 'b':True}
-        yield method, s, '<3><3><3>', 'm', {'id':3,'a?':True, 'b?':True}
-    yield method, s, 'abb', 'n', mydict(b=[1,2,3])
-    yield method, s, 'ab123d', 'o', mydict(b=[1,2,3])
-
-def null(*args, **kwargs):
-    return
-
-def run(method=bare, method_partial=bare_partial):
-    print('''class BaseTest(unittest.TestCase):
+# start generated code
+class BaseTest(unittest.TestCase):
     pass
-''')
 
+class verify(BaseTest):
 
-
-    print('class %s(BaseTest):' % method.__name__)
-    print('''
     def stache_verify(self, output, template, data):
         #print("%s with %s" % (template, data))
         result = render(template, data)
         result_iter = ''.join(Stache().render_iter(template, data))
-        #print("Output: %s\\n" % output)
-        #print("Result: %s\\n" % result)
+        #print("Output: %s\n" % output)
+        #print("Result: %s\n" % result)
         #assert result == output
         self.assertEqual(result, output)
         #assert result == result_iter
         self.assertEqual(result, result_iter)
 
-''')
-    test_counter = 0
-    for x in test(method):
-        test_counter += 1
-        print('''
-    def test_%s_%02d(self):
-        self.stache_verify%r
-''' % (x[0].__name__, test_counter, x[1:],))
-        #print(x[0].__name__, x[0], x[1:])
-        #raise shields
-        #x[0](*x[1:])
 
 
-    print('''
+    def test_verify_01(self):
+        self.stache_verify('a10c', 'a{{b}}c', {'b': 10})
+
+
+    def test_verify_02(self):
+        self.stache_verify('a10c', 'a{{b}}c', {'b': 10})
+
+
+    def test_verify_03(self):
+        self.stache_verify('ac', 'a{{b}}c', {'c': 10})
+
+
+    def test_verify_04(self):
+        self.stache_verify('a10c', 'a{{b}}c', {'b': '10'})
+
+
+    def test_verify_05(self):
+        self.stache_verify('acde', 'a{{!b}}cde', {'b': '10'})
+
+
+    def test_verify_06(self):
+        self.stache_verify('aTrue', 'a{{b}}', {'b': True})
+
+
+    def test_verify_07(self):
+        self.stache_verify('a123', 'a{{b}}{{c}}{{d}}', {'c': 2, 'b': 1, 'd': 3})
+
+
+    def test_verify_08(self):
+        self.stache_verify('ab', 'a{{#b}}b{{/b}}', {'b': True})
+
+
+    def test_verify_09(self):
+        self.stache_verify('a', 'a{{^b}}b{{/b}}', {'b': True})
+
+
+    def test_verify_10(self):
+        self.stache_verify('a', 'a{{#b}}b{{/}}', {'b': False})
+
+
+    def test_verify_11(self):
+        self.stache_verify('ab', 'a{{^b}}b{{/b}}', {'b': False})
+
+
+    def test_verify_12(self):
+        self.stache_verify('ab', 'a{{#b}}ignore me{{/b}}{{^b}}b{{/}}', {'b': []})
+
+
+    def test_verify_13(self):
+        self.stache_verify('ab', 'a{{#b}}b{{/b}}{{^b}}ignore me{{/}}', {'b': [1]})
+
+
+    def test_verify_14(self):
+        self.stache_verify('ab', 'a{{#b}}b{{/b}}{{^b}}ignore me{{/}}', {'b': True})
+
+
+    def test_verify_15(self):
+        self.stache_verify('a- 1 2 3 4', 'a{{?b}}-{{#b}} {{.}}{{/}}{{/}}', {'b': [1, 2, 3, 4]})
+
+
+    def test_verify_16(self):
+        self.stache_verify('a', 'a{{?b}}ignoreme{{/}}', {'b': False})
+
+
+    def test_verify_17(self):
+        self.stache_verify('a', 'a{{?b}}ignoreme{{/}}', {'b': []})
+
+
+    def test_verify_18(self):
+        self.stache_verify('a', 'a{{?b}}ignoreme{{/}}', {})
+
+
+    def test_verify_19(self):
+        self.stache_verify('abb', 'a{{?b}}b{{/}}{{?b}}b{{/}}', {'b': [1, 2, 3]})
+
+
+    def test_verify_20(self):
+        self.stache_verify('ab123d', 'a{{?b}}b{{#b}}{{.}}{{/}}d{{/}}', {'b': [1, 2, 3]})
+
+
+    def test_verify_21(self):
+        self.stache_verify('abbbb', 'a{{#b}}b{{/b}}', {'b': [1, 2, 3, 4]})
+
+
+    def test_verify_22(self):
+        self.stache_verify('a1234', 'a{{#b}}{{.}}{{/b}}', {'b': [1, 2, 3, 4]})
+
+
+    def test_verify_23(self):
+        self.stache_verify('a a=1 a=2 a=0 a', 'a {{#b}}a={{a}} {{/b}}a', {'a': 0, 'b': [{'a': 1}, {'a': 2}, {'c': 1}]})
+
+
+    def test_verify_24(self):
+        self.stache_verify('1', '{{#a}}{{#b}}{{c}}{{/b}}{{/a}}', {'a': {'b': {'c': 1}}})
+
+
+    def test_verify_25(self):
+        self.stache_verify('12', '{{#a}}{{#b}}{{c}}{{/}}{{/a}}', {'a': {'b': [{'c': 1}, {'c': 2}]}})
+
+
+    def test_verify_26(self):
+        self.stache_verify('12', '{{#a}}{{#b}}{{c}}{{/b}}{{/}}', {'a': [{'b': {'c': 1}}, {'b': {'c': 2}}]})
+
+
+    def test_verify_27(self):
+        self.stache_verify('132', '{{#a}}{{#b}}{{c}}{{/}}{{/}}', {'a': [{'b': [{'c': 1}, {'c': 3}]}, {'b': {'c': 2}}]})
+
+
+    def test_verify_28(self):
+        self.stache_verify('132456', '{{#a}}{{#b}}{{c}}{{/b}}{{/a}}', {'a': [{'b': [{'c': 1}, {'c': 3}]}, {'b': {'c': 2}}, {'b': [{'c': 4}, {'c': 5}]}, {'b': {'c': 6}}]})
+
+
+    def test_verify_29(self):
+        self.stache_verify('1', '{{#a}}{{#a}}{{c}}{{/a}}{{/a}}', {'a': {'a': {'c': 1}}})
+
+
+    def test_verify_30(self):
+        self.stache_verify('<3><3><3>', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}>', {'b?': True, 'id': 3, 'a?': True})
+
+
+    def test_verify_31(self):
+        self.stache_verify('delim{{a}}', '{{=<% %>=}}<%a%>{{a}}', {'a': 'delim'})
+
+
+    def test_verify_32(self):
+        self.stache_verify('delim{{a}}delim<%a%>', '{{=<% %>=}}<%a%>{{a}}<%={{ }}=%>{{a}}<%a%>', {'a': 'delim'})
+
+
+    def test_verify_33(self):
+        self.stache_verify('123test', '123{{:hi}}abc{{/}}', {'hi': 'test'})
+
+
+    def test_verify_34(self):
+        self.stache_verify('123test', '123{{:hi}}{{:hi}}abc{{/}}{{/}}', {'hi': 'test'})
+
+
+    def test_verify_35(self):
+        self.stache_verify('123abc', '123{{:hi}}{{:hi2}}abc{{/}}{{/}}', {})
+
+
+    def test_verify_36(self):
+        self.stache_verify('123cba', '123{{:hi}}{{:hi2}}abc{{/}}{{/}}', {'hi2': 'cba'})
+
+
+    def test_verify_37(self):
+        self.stache_verify('123abc', '123{{:hi}}abc{{/}}', {})
+
+
+    def test_verify_38(self):
+        self.stache_verify('123abc', '123{{:hi}}abc{{/}}', {'hi': False})
+
+
+    def test_verify_39(self):
+        self.stache_verify('123abc', '123{{:hi}}abc{{/}}', {'hi': []})
+
+
+    def test_verify_40(self):
+        self.stache_verify('123test', '{{<hi}}test{{/}}123{{:hi}}abc{{/}}', {})
+
+
+    def test_verify_41(self):
+        self.stache_verify('0123456789', '{{#a}}{{.}}{{/a}}', {'a': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]})
+
+
+    def test_verify_42(self):
+        self.stache_verify('02468', '{{#a}}{{.}}{{/a}}', {'a': [0, 2, 4, 6, 8]})
+
+
+    def test_verify_43(self):
+        self.stache_verify('&gt;&lt;', '{{a}}', {'a': '><'})
+
+
+    def test_verify_44(self):
+        self.stache_verify('><', '{{&a}}', {'a': '><'})
+
+
+    def test_verify_45(self):
+        self.stache_verify('><', '{{{a}}}', {'a': '><'})
+
+
 s = Stache()
 s.add_template('a', '1')
 s.add_template('b', '{{>a}}')
@@ -236,29 +214,87 @@ s.add_template('m', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}
 s.add_template('n', 'a{{?b}}b{{/}}{{?b}}b{{/}}')
 s.add_template('o', 'a{{?b}}b{{#b}}{{.}}{{/}}d{{/}}')
 
-''')
-    print('class %s(BaseTest):' % method_partial.__name__)
-    print('''
+
+class verify_partial(BaseTest):
+
     def stache_verify_partial(self, output, template, data={}):
         stachio = s
         #print("%s with %s" % (template, data))
         result = stachio.render_template(template, data)
-        #print("Result: %s\\n" % result)
+        #print("Result: %s\n" % result)
         #assert output == result
         self.assertEqual(result, output)
 
-''')
-    test_counter = 0
-    for x in test_partials(method_partial):
-        test_counter += 1
-        #print(x)
-        print('''
-    def test_%s_%02d(self):
-        self.stache_verify_partial%r
-''' % (x[0].__name__, test_counter, x[2:],))
-        #x[0](*x[1:])
 
-    print('''
+
+    def test_verify_partial_01(self):
+        self.stache_verify_partial('1', 'a', {})
+
+
+    def test_verify_partial_02(self):
+        self.stache_verify_partial('1', 'b', {})
+
+
+    def test_verify_partial_03(self):
+        self.stache_verify_partial('11', 'c', {})
+
+
+    def test_verify_partial_04(self):
+        self.stache_verify_partial('', 'd', {})
+
+
+    def test_verify_partial_05(self):
+        self.stache_verify_partial('555', 'd', {'a': {'b': 555}})
+
+
+    def test_verify_partial_06(self):
+        self.stache_verify_partial('123', 'g', {'a': {}})
+
+
+    def test_verify_partial_07(self):
+        self.stache_verify_partial('555', 'e', {'a': {'b': 555}})
+
+
+    def test_verify_partial_08(self):
+        self.stache_verify_partial('555', 'f', {'a': {'b': 555}})
+
+
+    def test_verify_partial_09(self):
+        self.stache_verify_partial('i=123', 'h', {})
+
+
+    def test_verify_partial_10(self):
+        self.stache_verify_partial('i=', 'i', {})
+
+
+    def test_verify_partial_11(self):
+        self.stache_verify_partial('showme', 'j', {})
+
+
+    def test_verify_partial_12(self):
+        self.stache_verify_partial('default', 'k', {})
+
+
+    def test_verify_partial_13(self):
+        self.stache_verify_partial('custom', 'k', {'e': 'custom'})
+
+
+    def test_verify_partial_14(self):
+        self.stache_verify_partial('<3><3><3>', 'l', {'a': True, 'b': True, 'id': 3})
+
+
+    def test_verify_partial_15(self):
+        self.stache_verify_partial('<3><3><3>', 'm', {'b?': True, 'id': 3, 'a?': True})
+
+
+    def test_verify_partial_16(self):
+        self.stache_verify_partial('abb', 'n', {'b': [1, 2, 3]})
+
+
+    def test_verify_partial_17(self):
+        self.stache_verify_partial('ab123d', 'o', {'b': [1, 2, 3]})
+
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -271,13 +307,5 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
-''')
 
-
-if __name__ == '__main__':
-    
-    print('# start generated code')
-    #print('starting tests')
-    run(verify, verify_partial)
-    #print('finished tests')
-    print('# end generated code')
+# end generated code
