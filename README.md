@@ -4,7 +4,13 @@
 
 Trimmed mustache logic-less templates
 
-Fork of https://github.com/hyperturtle/Stache with support for Cpython 2.2 up to and including Python 3.x. Also works with Jython 2.x.
+Fork of https://github.com/hyperturtle/Stache with:
+
+  * support for Cpython 2.2 up to and including Python 3.x
+  * Also works with Jython 2.x.
+  * Fix for trailing blank newlines (https://github.com/hyperturtle/Stache/issues/2)
+  * regular Python unittest based test suite
+
 Also see https://github.com/SmithSamuelM/staching which includes a fix for https://github.com/hyperturtle/Stache/issues/2 but doesn't support older Python versions, use if older Python support is not required.
 
 Implements everything from [Mustache.5](http://mustache.github.com/mustache.5.html)

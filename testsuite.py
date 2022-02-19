@@ -122,7 +122,10 @@ class verify(BaseTest):
 
 
     def test_verify_23(self):
-        self.stache_verify('a a=1 a=2 a=0 a', 'a {{#b}}a={{a}} {{/b}}a', {'a': 0, 'b': [{'a': 1}, {'a': 2}, {'c': 1}]})
+        self.stache_verify('aa=1 a=2 a=0 a', 'a {{#b}}a={{a}} {{/b}}a', {'a': 0, 'b': [{'a': 1}, {'a': 2}, {'c': 1}]})
+
+    def test_verify_23_a(self):
+        self.stache_verify('a a=1 a=2 a=0 a', 'a {{#b}} a={{a}}{{/b}} a', {'a': 0, 'b': [{'a': 1}, {'a': 2}, {'c': 1}]})
 
 
     def test_verify_24(self):
