@@ -186,15 +186,98 @@ def null(*args, **kwargs):
     return
 
 def run(method=bare, method_partial=bare_partial):
+    print('''class BaseTest(unittest.TestCase):
+    pass
+''')
+
+
+
+    print('class %s(BaseTest):' % method.__name__)
+    print('''
+    def stache_verify(self, output, template, data):
+        #print("%s with %s" % (template, data))
+        result = render(template, data)
+        result_iter = ''.join(Stache().render_iter(template, data))
+        #print("Output: %s\\n" % output)
+        #print("Result: %s\\n" % result)
+        #assert result == output
+        self.assertEqual(result, output)
+        #assert result == result_iter
+        self.assertEqual(result, result_iter)
+
+''')
+    test_counter = 0
     for x in test(method):
-        print(x[0].__name__, x[0], x[1:])
-        x[0](*x[1:])
+        test_counter += 1
+        print('''
+    def test_%s_%02d(self):
+        self.stache_verify%r
+''' % (x[0].__name__, test_counter, x[1:],))
+        #print(x[0].__name__, x[0], x[1:])
+        #raise shields
+        #x[0](*x[1:])
+
+
+    print('''
+s = Stache()
+s.add_template('a', '1')
+s.add_template('b', '{{>a}}')
+s.add_template('c', '{{>a}}{{>b}}')
+s.add_template('d', '{{#a}}{{b}}{{/a}}')
+s.add_template('e', '{{>d}}')
+s.add_template('f', '{{>e}}')
+s.add_template('g', '{{<e}}123{{/e}}{{e}}')
+s.add_template('h', '{{<e}}123{{/e}}{{>i}}')
+s.add_template('i', 'i={{e}}')
+s.add_template('j', 'show{{!ignoreme}}me')
+s.add_template('k', '{{:e}}default{{/}}')
+s.add_template('l', '<{{id}}><{{# a }}{{id}}{{/ a }}><{{# b }}{{id}}{{/ b }}>')
+s.add_template('m', '<{{id}}><{{# a? }}{{id}}{{/ a? }}><{{# b? }}{{id}}{{/ b? }}>')
+s.add_template('n', 'a{{?b}}b{{/}}{{?b}}b{{/}}')
+s.add_template('o', 'a{{?b}}b{{#b}}{{.}}{{/}}d{{/}}')
+
+''')
+    print('class %s(BaseTest):' % method_partial.__name__)
+    print('''
+    def stache_verify_partial(self, output, template, data={}):
+        stachio = s
+        #print("%s with %s" % (template, data))
+        result = stachio.render_template(template, data)
+        #print("Result: %s\\n" % result)
+        #assert output == result
+        self.assertEqual(result, output)
+
+''')
+    test_counter = 0
     for x in test_partials(method_partial):
-        x[0](*x[1:])
+        test_counter += 1
+        #print(x)
+        print('''
+    def test_%s_%02d(self):
+        self.stache_verify_partial%r
+''' % (x[0].__name__, test_counter, x[2:],))
+        #x[0](*x[1:])
+
+    print('''
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+
+    print('Python %s on %s' %(sys.version, sys.platform))
+    unittest.main()
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+''')
 
 
 if __name__ == '__main__':
     
-    print('starting tests')
+    print('# start generated code')
+    #print('starting tests')
     run(verify, verify_partial)
-    print('finished tests')
+    #print('finished tests')
+    print('# end generated code')
