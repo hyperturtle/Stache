@@ -1,11 +1,11 @@
 from __future__ import generators
 import sys
 try:
-    # py2
-    from cgi import escape
-except ImportError:
     # py 3.8+
     from html import escape
+except ImportError:
+    # py2
+    from cgi import escape
 
 try:
     raise ImportError
