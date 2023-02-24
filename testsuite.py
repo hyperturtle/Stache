@@ -13,10 +13,6 @@ from stache import render, Stache
 
 # start generated code
 class BaseTest(unittest.TestCase):
-    pass
-
-class verify(BaseTest):
-
     def stache_verify(self, output, template, data):
         #print("%s with %s" % (template, data))
         result = render(template, data)
@@ -27,6 +23,9 @@ class verify(BaseTest):
         self.assertEqual(result, output)
         #assert result == result_iter
         self.assertEqual(result, result_iter)
+
+
+class verify(BaseTest):
 
     # test tag lookup
     def test_verify_01(self):
@@ -317,6 +316,16 @@ class verify_partial(BaseTest):
     def test_verify_partial_17(self):
         self.stache_verify_partial('ab123d', 'o', {'b': [1, 2, 3]})
 
+
+class RaisesErrors(BaseTest):
+
+    def test_good_tags(self):
+        self.stache_verify('1', '{{#a}}{{b}}{{/a}}', {'a': {'b': '1'}})
+
+    def test_mismatched_tags(self):  # compare with test_good_tags()
+        #self.stache_verify('1', '{{#a}}{{b}}{{/b}}', {'a': {'b': '1'}})  # 'a' not closed, attempts to close 'b' instead
+        self.assertRaises(AssertionError, self.stache_verify, '1', '{{#a}}{{b}}{{/b}}', {'a': {'b': '1'}})  # 'a' not closed, attempts to close 'b' instead
+        # TODO check error/exception documents correct tags in error
 
 def main(argv=None):
     if argv is None:

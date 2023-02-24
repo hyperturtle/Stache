@@ -396,7 +396,7 @@ class Stache(object):
             elif close_tag is not None:
                 current_scope = scope.pop()
                 if close_tag:
-                    assert (current_scope == close_tag), 'Mismatch open/close blocks'
+                    assert (current_scope == close_tag), 'Mismatch open/close blocks, %r != %r' % (current_scope, close_tag)  # TODO replace with a check, assertions can be optimized out
                 yield TOKEN_TAGCLOSE, current_scope, len(scope)+1
             elif booltern_tag:
                 scope.append(booltern_tag)
