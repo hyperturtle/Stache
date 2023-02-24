@@ -4,10 +4,20 @@
 
 Trimmed mustache logic-less templates
 
+Fork of https://github.com/hyperturtle/Stache with:
+
+  * support for Cpython 2.2 up to and including Python 3.x
+  * Also works with Jython 2.x.
+  * Fix for trailing blank newlines (https://github.com/hyperturtle/Stache/issues/2)
+  * regular Python unittest based test suite
+
+Also see https://github.com/SmithSamuelM/staching which includes a fix for https://github.com/hyperturtle/Stache/issues/2 but doesn't support older Python versions, use if older Python support is not required.
+
 Implements everything from [Mustache.5](http://mustache.github.com/mustache.5.html)
 **except for lambdas** in < 200 lines of code. Plus four new things. Implied closing tags
 `{{/}}`, Self referencer `{{.}}`, Existence check `{{?exists}}{{/exists}}` and data pusher 
 `{{< blah}}{{/blah}}`, `{{:default}}`
+
 
 # Also, the ability to compile to javascript code!
 
@@ -220,9 +230,17 @@ Custom Footer
 
     pip install stache
 
+Optionally install Nose for running nosetests, there is a regular unittest that does not require nose).
+
+    pip install nose
+
 # Test
 
-You can run `python test.py` or if you have nosetests:
+Pure python tests can be ran with:
+
+    python testsuite.py
+
+The Python and javascript tests can be ran with `python test.py` or if you have nosetests:
 
     cd stache
     nosetests

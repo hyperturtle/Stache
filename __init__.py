@@ -1,11 +1,42 @@
-import itertools
-from cgi import escape
+from __future__ import generators
+import sys
+try:
+    # py 3.8+
+    from html import escape
+except ImportError:
+    # py2
+    from cgi import escape
+
+try:
+    raise ImportError
+    import itertools
+    itertools_takewhile = itertools.takewhile
+except ImportError:
+    # fake it
+
+    def takewhile(predicate, iterable):
+        # takewhile(lambda x: x<5, [1,4,6,4,1]) --> 1 4
+        for x in iterable:
+            if predicate(x):
+                yield x
+            else:
+                break
+
+    itertools_takewhile = takewhile
 
 
 try:
     from sys import intern
 except ImportError:
     pass
+
+py_ver = sys.version[:3]
+py_v3 = py_ver >= '3.0'
+
+if py_v3:
+    string_func = str
+else:
+    string_func = unicode
 
 TOKEN_RAW        = intern('raw')
 TOKEN_TAGOPEN    = intern('tagopen')
@@ -100,13 +131,16 @@ BOOTSRAP_POST = """
 
 
 def _checkprefix(tag, prefix):
-    return tag[1:].strip() if tag and tag[0] == prefix else None
+    if tag and tag[0] == prefix:
+        return tag[1:].strip()
+    else:
+        return None
 
 
 def _lookup(data, datum):
     for scope in data:
         if datum == '.':
-            return str(scope)
+            return string_func(scope)
         elif datum in scope:
             return scope[datum]
         elif hasattr(scope, datum):
@@ -221,23 +255,127 @@ class Stache(object):
 
         while rest and len(rest) > 0:
             pre_section    = rest.split(self.otag, 1)
-            pre, rest      = pre_section if len(pre_section) == 2 else (pre_section[0], None)
-            taglabel, rest = rest.split(self.ctag, 1) if rest else (None, None)
-            taglabel       = taglabel.strip() if taglabel else ''
+            
+            
+            if len(pre_section) == 2:
+                pre, rest = pre_section
+            else:
+                pre, rest = (pre_section[0], None)
+            if rest:
+                taglabel, rest = rest.split(self.ctag, 1)
+            else:
+                taglabel, rest = (None, None)
+            
+            if taglabel:
+                taglabel = taglabel.strip()
+            else:
+                taglabel = ''
             open_tag       = _checkprefix(taglabel, '#')
-            invert_tag     = _checkprefix(taglabel, '^') if not open_tag else None
-            close_tag      = _checkprefix(taglabel, '/') if not invert_tag else None
-            comment_tag    = _checkprefix(taglabel, '!') if not close_tag else None
-            partial_tag    = _checkprefix(taglabel, '>') if not comment_tag else None
-            push_tag       = _checkprefix(taglabel, '<') if not partial_tag else None
-            bool_tag       = _checkprefix(taglabel, '?') if not push_tag else None
-            booltern_tag   = _checkprefix(taglabel, ':') if not bool_tag else None
-            unescape_tag   = _checkprefix(taglabel, '{') if not booltern_tag else None
-            rest           = rest[1:] if unescape_tag else rest
-            unescape_tag   = (unescape_tag or _checkprefix(taglabel, '&')) if not booltern_tag else None
-            delim_tag      = taglabel[1:-1] if not unescape_tag and len(taglabel) >= 2 and taglabel[0] == '=' and taglabel[-1] == '=' else None
-            delim_tag      = delim_tag.split(' ', 1) if delim_tag else None
-            delim_tag      = delim_tag if delim_tag and len(delim_tag) == 2 else None
+            if not open_tag:
+                invert_tag = _checkprefix(taglabel, '^')
+            else:
+                invert_tag = None
+            if not invert_tag:
+                close_tag      = _checkprefix(taglabel, '/')
+            else:
+                close_tag      = None
+            comment_tag    = None
+            partial_tag    = None
+            push_tag       = None
+            bool_tag       = None
+            booltern_tag   = None
+            unescape_tag   = None
+                
+            if not close_tag:
+                comment_tag    = _checkprefix(taglabel, '!')
+            if not comment_tag:
+                partial_tag    = _checkprefix(taglabel, '>')
+            if not partial_tag:
+                push_tag       = _checkprefix(taglabel, '<')
+            if not push_tag:
+                bool_tag       = _checkprefix(taglabel, '?')
+            if not bool_tag:
+                booltern_tag   = _checkprefix(taglabel, ':')
+            if not booltern_tag:
+                unescape_tag   = _checkprefix(taglabel, '{')
+            
+            if unescape_tag:
+                rest           = rest[1:]
+            else:
+                rest           = rest # FIXME seems like a NOOP
+            
+            if not booltern_tag:
+                unescape_tag   = (unescape_tag or _checkprefix(taglabel, '&'))
+            else:
+                unescape_tag   = None
+            if not unescape_tag and len(taglabel) >= 2 and taglabel[0] == '=' and taglabel[-1] == '=':
+                delim_tag      = taglabel[1:-1]                
+            else:
+                delim_tag      = None
+            if delim_tag:
+                delim_tag      = delim_tag.split(' ', 1)
+            else:
+                delim_tag      = None
+            
+            if delim_tag and len(delim_tag) == 2:
+                delim_tag      = delim_tag
+            else:
+                delim_tag      = None
+
+            # fix for https://github.com/hyperturtle/Stache/issues/2 from https://github.com/SmithSamuelM/staching/commit/f2c591ec69cc922c6ffec67e0d66f8047f2f2bf3
+            if  (   open_tag or invert_tag or comment_tag or
+                    partial_tag or push_tag or bool_tag or
+                    booltern_tag or unescape_tag or delim_tag): # not a variable
+                inline = False
+                if rest: # strip trailing whitespace and linefeed if present
+                    front, sep, back = rest.partition("\n") # partition at linefeed
+                    if sep:
+                        if not front.strip(): # only whitespace before linefeed
+                            rest = back # removed whitespace and linefeed
+                            #if _debug: print( "open rest strip front: \n%s" %  rest)
+                        else: #inline
+                            inline = True
+                            #if _debug: print( "open inline:")
+                if not inline and pre: #strip trailing whitespace after linefeed if present
+                    front, sep, back = pre.rpartition("\n")
+                    if sep:
+                        if not back.strip(): # only whitespace after linefeed
+                            pre = ''.join((front, sep)) # restore linefeed
+                            #if _debug: print( "open pre strip back: \n%s" % pre)
+                    else:
+                        pre = back.rstrip() #no linefeed so rstrip
+                        #if _debug: print( "open pre rstrip back: \n%s" % pre)
+
+            elif close_tag:
+                inline = True # section is inline
+                follow = False # followed by inline
+                post = ''
+
+                if rest: # see if inline follows
+                    front, sep, back = rest.partition("\n")
+                    if front.strip(): # not empty before linefeed so inline follows
+                        follow = True # inline follows
+                        #if _debug: print( "close follow:")
+
+                if pre: #strip trailing whitespace after prev linefeed if present
+                    front, sep, back = pre.rpartition("\n")
+                    if sep and not back.strip(): # only whitespace after linefeed
+                        inline = False
+                        #if _debug: print() "close not inline:" )
+                        if follow:
+                            post = back # save spacing for following inline
+                        pre = ''.join((front, sep)) # restore upto linefeed
+                        #if _debug: print( "close pre strip back: \n%s" % pre)
+
+                if not inline and rest: # strip trailing whitespace and linefeed if present
+                    if follow: # restore saved spacing
+                        rest = post + rest
+                        #print( "close follow rest: \n%s" %  rest)
+                    front, sep, back = rest.partition("\n") # partition at linefeed
+                    if sep:
+                        if not front.strip(): # only whitespace before linefeed
+                            rest = back # remove trailing whitespace and linefeed
+                            #if _debug: print( "close rest strip front: \n%s" %  rest)
 
             if push_tag:
                 pre = pre.rstrip()
@@ -258,7 +396,7 @@ class Stache(object):
             elif close_tag is not None:
                 current_scope = scope.pop()
                 if close_tag:
-                    assert (current_scope == close_tag), 'Mismatch open/close blocks'
+                    assert (current_scope == close_tag), 'Mismatch open/close blocks, %r != %r' % (current_scope, close_tag)  # TODO replace with a check, assertions can be optimized out
                 yield TOKEN_TAGCLOSE, current_scope, len(scope)+1
             elif booltern_tag:
                 scope.append(booltern_tag)
@@ -280,10 +418,10 @@ class Stache(object):
 
     def _parse(self, tokens, *data):
         for token in tokens:
-            #print '    token:' + str(token)
+            #print '    token:' + string_func(token)
             tag, content, scope = token
             if tag == TOKEN_RAW:
-                yield str(content)
+                yield string_func(content)
             elif tag == TOKEN_TAG:
                 tagvalue = _lookup(data, content)
                 #cant use if tagvalue because we need to render tagvalue if it's 0
@@ -292,17 +430,17 @@ class Stache(object):
                     try:
                         if len(tagvalue) > 0:
                             if scope:
-                                yield str(tagvalue)
+                                yield string_func(tagvalue)
                             else:
-                                yield escape(str(tagvalue))
+                                yield escape(string_func(tagvalue))
                     except TypeError:
                         if scope:
-                            yield str(tagvalue)
+                            yield string_func(tagvalue)
                         else:
-                            yield escape(str(tagvalue))
+                            yield escape(string_func(tagvalue))
             elif tag == TOKEN_TAGOPEN or tag == TOKEN_TAGINVERT:
                 tagvalue = _lookup(data, content)
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 if (tag == TOKEN_TAGOPEN and tagvalue) or (tag == TOKEN_TAGINVERT and not tagvalue):
                     if hasattr(tagvalue, 'items'):
                         #print '    its a dict!', tagvalue, untilclose
@@ -330,7 +468,7 @@ class Stache(object):
                         pass
             elif tag == TOKEN_BOOL:
                 tagvalue = _lookup(data, content)
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 if tagvalue:
                     for part in self._parse(untilclose, *data):
                         yield part
@@ -342,7 +480,7 @@ class Stache(object):
                     for part in self._parse(iter(list(self.templates[content])), *data):
                         yield part
             elif tag == TOKEN_PUSH:
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 data[-1][content] = ''.join(self._parse(untilclose, *data))
             elif tag == TOKEN_TAGDELIM:
                 self.otag, self.ctag = content
@@ -353,7 +491,7 @@ class Stache(object):
         for token in tokens:
             tag, content, scope = token
             if tag == TOKEN_RAW:
-                yield "'{0}'".format(str(content))
+                yield "'{0}'".format(string_func(content))
             elif tag == TOKEN_TAG:
                 if content != '':
                     if scope:
@@ -361,7 +499,7 @@ class Stache(object):
                     else:
                         yield "htmlEncode(lookup(data, '{0}'))".format(content)
             elif tag == TOKEN_TAGOPEN or tag == TOKEN_TAGINVERT or tag == TOKEN_BOOL:
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 inside = self._jsparse(untilclose)
                 if tag == TOKEN_TAGOPEN:
                     pre = "return section(data, lookup(data, tag), function (data) {"
@@ -381,7 +519,7 @@ class Stache(object):
             elif tag == TOKEN_PARTIAL:
                 yield "templates['{0}'](data)".format(content)
             elif tag == TOKEN_PUSH:
-                untilclose = itertools.takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
+                untilclose = itertools_takewhile(lambda x: x != (TOKEN_TAGCLOSE, content, scope), tokens)
                 self.hoist_data[content] = _renderjsfunction(self._jsparse(untilclose), params="data")
             elif tag == TOKEN_TAGDELIM:
                 self.otag, self.ctag = content
