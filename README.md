@@ -2,6 +2,8 @@
 
 # Stache
 
+NOTE see hard-fork https://github.com/clach04/stache (and issue tracker there). I may not continue updating this repo.
+
 Trimmed mustache logic-less templates
 
 Fork of https://github.com/hyperturtle/Stache with:
